@@ -11,6 +11,8 @@ To build from source (If you're paranoid about the releases), just clone the rep
 
 For everyone else, download the latest release, and enjoy!
 
+##### This app requires **Ollama**, an AI model loader.
+
 ## Background Information:
 *In a galaxy far, far away, a man lay-* Shut up. **NERD!**
 
