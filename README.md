@@ -26,7 +26,7 @@ If you find a bug, report it in Eclipse Studios, and that's all from me. Enjoy!
 * Youtube Channel - [Youtube Link](https://youtube.com/@SpaceReii)
 
 ## Quotes
-My Mother: *"Bu Bu Bu"* (I have no fucking idea what she's on)
-x_z3n: *"if you don't have to, do NOT use Java"*
-Puro: *"IT WAS A MISSCLICK I SWEAR!"*
-SpvceR3ii: *"hippity hoppity your code is now my property"*
+* My Mother: *"Bu Bu Bu"* (I have no fucking idea what she's on)
+* x_z3n: *"if you don't have to, do NOT use Java"*
+* Puro: *"IT WAS A MISSCLICK I SWEAR!"*
+* SpvceR3ii: *"hippity hoppity your code is now my property"*
