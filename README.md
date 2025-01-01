@@ -1,6 +1,8 @@
 # Character.Chat
 ## "A fully local alternative to Character.AI"
 
+![character.chat logo](images/character.chat-logo.png)
+
 As of the following weeks, character.ai has slowly degraded in quality. It's community is in outrage over new features, filters are going crazy, and more.
 Character.Chat fixes that. This is a fully local implementation, a barebones system, of what I've been working on.
 
