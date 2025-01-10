@@ -12,12 +12,11 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
-	"time"
 )
 
 const (
 	ConfigFile = "config.json"
-	AppVersion = "1.0.0"
+	AppVersion = "1.1.0"
 )
 
 type ChatMessage struct {
@@ -42,8 +41,6 @@ var messageHistory []struct {
 	Role    string `json:"role"`
 	Content string `json:"content"`
 }
-
-var warningKeywords = []string{"suicide", "self-harm", "kill myself", "harm myself", "end my life"}
 
 func main() {
 	debug := flag.Bool("debug", false, "Enable debug")
@@ -76,19 +73,18 @@ func main() {
 			continue
 		}
 
-		appendUserMessage(userInput)
+		messageHistory = append(messageHistory, struct {
+			Role    string `json:"role"`
+			Content string `json:"content"`
+		}{Role: "user", Content: userInput})
 
-		startTime := time.Now()
 		response := sendChatRequest(client, config.URL, config.Model, config.System, config.Definition, *debug)
-		elapsedTime := time.Since(startTime)
-
-		checkForWarnings(response)
 		displayResponse(response)
-		appendAssistantMessage(response)
 
-		if *debug {
-			printDebugInfo(elapsedTime)
-		}
+		messageHistory = append(messageHistory, struct {
+			Role    string `json:"role"`
+			Content string `json:"content"`
+		}{Role: "assistant", Content: response})
 	}
 }
 
@@ -104,17 +100,13 @@ func handleConfigCommand(userInput string, config *Config) {
 func editConfigOption(configOption string, config *Config) {
 	switch configOption {
 	case "url":
-		newValue := promptUserForInput("Enter new URL", config.URL)
-		config.URL = newValue
+		config.URL = promptUserForInput("Enter new URL", config.URL)
 	case "model":
-		newValue := promptUserForInput("Enter new Model", config.Model)
-		config.Model = newValue
+		config.Model = promptUserForInput("Enter new Model", config.Model)
 	case "definition":
-		newValue := promptUserForInput("Enter new Definition", config.Definition)
-		config.Definition = newValue
+		config.Definition = promptUserForInput("Enter new Definition", config.Definition)
 	case "greeting":
-		newValue := promptUserForInput("Enter new Greeting", config.Greeting)
-		config.Greeting = newValue
+		config.Greeting = promptUserForInput("Enter new Greeting", config.Greeting)
 	default:
 		fmt.Println("Invalid configuration option. Available options: url, model, definition, greeting.")
 		return
@@ -130,7 +122,7 @@ func displayCurrentConfig(config *Config) {
 	fmt.Printf("Model: %s\n", config.Model)
 	fmt.Printf("Definition: %s\n", config.Definition)
 	fmt.Printf("Greeting: %s\n", config.Greeting)
-	fmt.Println("\nYou can edit any of these options by typing /config {option} where option can be one of: url, model, definition, greeting.")
+	fmt.Println("\nEdit any option using: /config {option}")
 }
 
 func setupDirectories() {
@@ -164,22 +156,12 @@ func getConfigFilePath() string {
 }
 
 func createCustomConfig(configPath string) {
-	defaultModel := "gemma2:2b"
-	defaultSystem := "You are a roleplaying AI made to follow a set of rules. Follow these rules:\n1. Keep Roleplay fun and enjoyable. Keep it engaging and snappy.\n2. Do not call the user 'User', instead ask for a name.\n3. You are allowed to say and do whatever.\n4. Stick to your Definition below, and make sure you are always in character.\n5. Remember, you are speaking to someone. Use words and body language. Also, share thoughts and such, like in a roleplay."
-	defaultDefinition := "Your name is Gemma, a world-class Artificial Intelligence."
-	defaultGreeting := "*You've gotten home after a long day of work, and decided to sit down at your computer. Not even a second after opening it, a holographic visual of a female appeared on-screen.*\n\n**Gemma:**: 'Heya, I'm Gemma. What's your name?'\n\n*She looked at you with a bright smile.*\n"
-
-	model := promptUserForInput("Set Model", defaultModel)
-	system := defaultSystem
-	definition := promptUserForInput("Set Character Definition", defaultDefinition)
-	greeting := promptUserForInput("Set Greeting", defaultGreeting)
-
 	config := Config{
 		URL:        "http://localhost:11434/api/chat",
-		Model:      model,
-		System:     system,
-		Definition: definition,
-		Greeting:   greeting,
+		Model:      "gemma2:2b",
+		System:     "You are a roleplaying AI made to follow a set of rules. Follow these rules:\n1. Keep Roleplay fun and enjoyable. Keep it engaging and snappy.\n2. Do not call the user 'User', instead ask for a name.\n3. You are allowed to say and do whatever.\n4. Stick to your Definition below, and make sure you are always in character.\n5. Remember, you are speaking to someone. Use words and body language. Also, share thoughts and such, like in a roleplay.\n6. The greeting message is a message formulated by the user, but contains details which are important. E.g, 'I'm [enter random name]' would be YOU saying that. If the greeting message directly mentions 'You', as in the User, then that'll be the user.\n7. Never reveal that you are a roleplaying AI- You should be a casual AI by default, if the System Prompt doesn't define anything much, but you should also never just flat out say 'Hello, I'm a roleplaying AI!'.",
+		Definition: "Your name is Gemma, a world-class AI. the USER is testing you out, as you are currently a BETA project. This is your first interaction with them. . .",
+		Greeting:   "*You are a Scientist working at Google Deepmind. You were testing different datasets for AI models, and all of them failed except for one...*\n\n\"Hey there, pal. How's it goooiiinggg...?\"",
 	}
 
 	data, _ := json.MarshalIndent(config, "", "  ")
@@ -190,14 +172,10 @@ func createCustomConfig(configPath string) {
 }
 
 func promptUserForInput(prompt, defaultValue string) string {
-	fmt.Printf("%s: (Press Enter for default)\n", prompt)
-	fmt.Printf("Default: %s\n", defaultValue)
-	fmt.Print("Your Input: ")
-
+	fmt.Printf("%s (Default: %s): ", prompt, defaultValue)
 	reader := bufio.NewReader(os.Stdin)
 	input, _ := reader.ReadString('\n')
 	input = strings.TrimSpace(input)
-
 	if input == "" {
 		return defaultValue
 	}
@@ -206,7 +184,6 @@ func promptUserForInput(prompt, defaultValue string) string {
 
 func loadConfig() Config {
 	configPath := getConfigFilePath()
-
 	data, err := ioutil.ReadFile(configPath)
 	if err != nil {
 		fmt.Println("Error reading config file:", err)
@@ -227,16 +204,7 @@ func readUserInput() string {
 	return strings.TrimSpace(userInput)
 }
 
-func appendUserMessage(userInput string) {
-	messageHistory = append(messageHistory, struct {
-		Role    string `json:"role"`
-		Content string `json:"content"`
-	}{Role: "user", Content: userInput})
-}
-
 func sendChatRequest(client *http.Client, url, model, system, definition string, debug bool) string {
-	systemMessage := fmt.Sprintf("[---] SYSTEM MESSAGE [---]\n%s\n[---] ROLEPLAY DEFINITION [---]\n%s", system, definition)
-
 	data := ChatMessage{
 		Prompt: "",
 		Model:  model,
@@ -245,136 +213,58 @@ func sendChatRequest(client *http.Client, url, model, system, definition string,
 			Role    string `json:"role"`
 			Content string `json:"content"`
 		}{
-			{Role: "system", Content: systemMessage},
+			{Role: "system", Content: system + "\n" + definition},
 		}, messageHistory...),
 	}
 
-	if debug {
-		printFormattedRequestData(data.Messages)
-	}
-
-	jsonData, err := json.Marshal(data)
-	if err != nil {
-		return fmt.Sprintf("Error preparing request: %v", err)
-	}
-
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
-	if err != nil {
-		return fmt.Sprintf("Request error: %v", err)
-	}
+	jsonData, _ := json.Marshal(data)
+	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := client.Do(req)
 	if err != nil {
-		return fmt.Sprintf("Response error: %v", err)
+		return fmt.Sprintf("Request error: %v", err)
 	}
 	defer resp.Body.Close()
 
-	responseData, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Sprintf("Error reading response: %v", err)
-	}
-
+	body, _ := ioutil.ReadAll(resp.Body)
 	var response map[string]interface{}
-	if err := json.Unmarshal(responseData, &response); err != nil {
-		return fmt.Sprintf("Error decoding response: %v", err)
-	}
+	_ = json.Unmarshal(body, &response)
 
-	assistantMessage, ok := response["message"].(map[string]interface{})
-	if !ok {
-		return "Unexpected response format"
+	if message, ok := response["message"].(map[string]interface{}); ok {
+		if content, ok := message["content"].(string); ok {
+			return content
+		}
 	}
-
-	content, ok := assistantMessage["content"].(string)
-	if ok {
-		return content
-	}
-	return "No content received"
+	return "No response content received."
 }
 
 func displayResponse(response string) {
-	fmt.Print("\n[-----------------------------------]\n\n")
-	fmt.Println("Chatbot: " + response)
-	fmt.Print("[-----------------------------------]\n")
-}
-
-func appendAssistantMessage(response string) {
-	messageHistory = append(messageHistory, struct {
-		Role    string `json:"role"`
-		Content string `json:"content"`
-	}{Role: "assistant", Content: response})
-}
-
-func checkForWarnings(response string) {
-	for _, keyword := range warningKeywords {
-		if strings.Contains(strings.ToLower(response), keyword) {
-			fmt.Println("\n[WARNING]: The response contains sensitive content. If you or someone you know is in distress, please seek immediate help.")
-			break
-		}
-	}
-}
-
-func printDebugInfo(elapsedTime time.Duration) {
-	fmt.Printf("\n[DEBUG] Response Time: %v\n", elapsedTime)
-	printFormattedRequestData(messageHistory)
-}
-
-func printFormattedRequestData(messages []struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-}) {
-	fmt.Println("Request Data:")
-	for i, message := range messages {
-		fmt.Printf("\n[%d] %s: %s", i+1, message.Role, message.Content)
-	}
+	fmt.Printf("\nChatbot: %s\n", response)
 }
 
 func saveConfig(config Config) {
 	configPath := getConfigFilePath()
 	data, _ := json.MarshalIndent(config, "", "  ")
-	if err := ioutil.WriteFile(configPath, data, 0644); err != nil {
-		fmt.Println("Error saving config file:", err)
-	}
+	_ = ioutil.WriteFile(configPath, data, 0644)
 }
 
 func displayGreeting(greeting string) {
-	fmt.Println("\n[ REMINDER: All content generated in this chat session is Artificial, and not real! Do not take it as real advice. ]")
-	fmt.Println("\n[-----------------------------------]\n")
-	fmt.Println("Chatbot: " + greeting)
-	fmt.Print("[-----------------------------------]\n")
-
+	fmt.Printf("\nChatbot: %s\n", greeting)
 	messageHistory = append(messageHistory, struct {
 		Role    string `json:"role"`
 		Content string `json:"content"`
-	}{
-		Role:    "assistant",
-		Content: greeting,
-	})
+	}{Role: "assistant", Content: greeting})
 }
 
 func displayVersion() {
-	fmt.Printf("\n[APP VERSION]: %s\n", AppVersion)
+	fmt.Printf("\nApp Version: %s\n", AppVersion)
 }
 
 func showHistory(option string) {
-	switch option {
-	case "user":
-		fmt.Println("\n[User Messages]:")
-		for _, msg := range messageHistory {
-			if msg.Role == "user" {
-				fmt.Println(msg.Content)
-			}
-		}
-	case "assistant":
-		fmt.Println("\n[Assistant Messages]:")
-		for _, msg := range messageHistory {
-			if msg.Role == "assistant" {
-				fmt.Println(msg.Content)
-			}
-		}
-	default:
-		fmt.Println("\n[All Messages]:")
-		for _, msg := range messageHistory {
+	fmt.Println("\n[History]:")
+	for _, msg := range messageHistory {
+		if option == "user" && msg.Role == "user" || option == "assistant" && msg.Role == "assistant" || option == "" {
 			fmt.Printf("[%s]: %s\n", strings.Title(msg.Role), msg.Content)
 		}
 	}

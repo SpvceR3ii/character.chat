@@ -15,10 +15,18 @@ For everyone else, download the latest release, and enjoy!
 
 ##### This app requires **Ollama**, an AI model loader.
 
+## Roadmap:
+- [x] Character Creation Support
+- [x] Windows Support
+- [x] Multi-LLM Support
+- [] Character Storage 
+
 ## Background Information:
 *In a galaxy far, far away, a man lay-* Shut up. **NERD!**
 
 This is a really shitty remake of an old system I made in Python, so be warned... the code is ass.
+
+Initially made to revert the changes made with Character.AI's recent updates, this app is packed in with a few features which make it a great competitor.
 
 I'm planning on adding in more, such as automatic updating and enhanced character creation, but it's simply not going to happen until I get better at Golang.
 
