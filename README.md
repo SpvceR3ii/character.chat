@@ -19,7 +19,7 @@ For everyone else, download the latest release, and enjoy!
 - [x] Character Creation Support
 - [x] Windows Support
 - [x] Multi-LLM Support
-- [-] Character Storage 
+- [ ] Character Storage 
 
 ## Background Information:
 *In a galaxy far, far away, a man lay-* Shut up. **NERD!**
